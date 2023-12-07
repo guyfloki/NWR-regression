@@ -2,6 +2,7 @@ from scipy.optimize import minimize
 from scipy.stats import uniform
 from typing import Callable, Union
 import numpy as np
+import pandas as pd
 from scipy.sparse import issparse, csr_matrix
 from concurrent.futures import ThreadPoolExecutor
 
