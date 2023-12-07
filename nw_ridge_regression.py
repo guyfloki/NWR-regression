@@ -80,7 +80,11 @@ def adamW_optimizer(
         params -= lr * (m_hat / (np.sqrt(v_hat) + epsilon) + weight_decay * params)
 
     return params
-
+def _to_numpy(X):
+    if isinstance(X, pd.DataFrame):
+        return X.to_numpy()
+    return X
+    
 class NadarayaWatsonRidgeRegression:
     """
     Integrated ridge regression model with Nadaraya-Watson kernel smoothing.
@@ -126,7 +130,7 @@ class NadarayaWatsonRidgeRegression:
 
         return kernel_values
 
-    def fit(self, X: Union[np.ndarray, csr_matrix], y: np.ndarray) -> None:
+    def fit(self, X: Union[np.ndarray, csr_matrix, pd.DataFrame], y: Union[np.ndarray, pd.Series]) -> None:
         """
         Fit the model to the given training data.
         
@@ -136,12 +140,15 @@ class NadarayaWatsonRidgeRegression:
             y: np.ndarray
                 Target vector.
         """
+        X = _to_numpy(X) 
+        y = _to_numpy(y)
         # Clear any previous kernel cache
         self._clear_kernel_cache()
 
         # Convert to CSR format if the input is sparse
         if issparse(X):
             X = csr_matrix(X)
+
 
         self.X_train = X
         self.y_train = y
@@ -167,7 +174,7 @@ class NadarayaWatsonRidgeRegression:
         optimal_params = adamW_optimizer(loss, initial_params)
         self.w, self.b = optimal_params[:-1], optimal_params[-1]
 
-    def predict(self, X: Union[np.ndarray, csr_matrix]) -> np.ndarray:
+    def predict(self, X: Union[np.ndarray, csr_matrix, pd.DataFrame]) -> np.ndarray:
         """
         Predict the target values for a new set of data points.
         
@@ -178,6 +185,8 @@ class NadarayaWatsonRidgeRegression:
         Returns:
             np.ndarray: The predicted target values.
         """
+        X = _to_numpy(X) 
+
         # Convert to CSR format if the input is sparse
         if issparse(X):
             X = csr_matrix(X)
@@ -187,7 +196,8 @@ class NadarayaWatsonRidgeRegression:
         
         return linear_preds + kernel_corrections
 
-    def _nadaraya_watson(self, X: np.ndarray, y: np.ndarray, X_query: np.ndarray, batch_size: int = 50) -> np.ndarray:
+    def _nadaraya_watson(self, X: Union[np.ndarray, pd.DataFrame], y: Union[np.ndarray, pd.Series], X_query: Union[np.ndarray, pd.DataFrame], batch_size: int = 50) -> np.ndarray:
+
             """
             Compute the Nadaraya-Watson estimator for a set of query points.
             
@@ -204,6 +214,9 @@ class NadarayaWatsonRidgeRegression:
             Returns:
                 np.ndarray: The Nadaraya-Watson estimates for the query points.
             """
+            X = _to_numpy(X) 
+            y = _to_numpy(y)  
+            X_query = _to_numpy(X_query) 
             n_batches = (X.shape[0] + batch_size - 1) // batch_size
             weighted_sums = np.zeros(X_query.shape[0])
             total_weights = np.zeros(X_query.shape[0])
